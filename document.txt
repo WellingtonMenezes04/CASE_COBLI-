@@ -1,0 +1,56 @@
+================================================================================
+DOCUMENTAÇÃO DE ENGENHARIA DE DADOS: TRANSFORMAÇÕES DA CAMADA PRATA
+================================================================================
+Projeto: Pipeline de Dados - Acidentes de Trânsito no Brasil
+Ambiente: Databricks (PySpark)
+Camada Alvo: Prata (Silver)
+================================================================================
+
+1. OBJETIVO DO SCRIPT
+Este documento detalha as etapas de extração, transformação e limpeza (ETL) aplicadas aos dados brutos de acidentes de trânsito. O objetivo principal é transformar os dados da camada Bronze em dados estruturados, limpos e padronizados para a camada Prata, habilitando-os para análises e relatórios de negócio.
+
+--------------------------------------------------------------------------------
+2. DETALHAMENTO DAS ETAPAS E JUSTIFICATIVAS
+--------------------------------------------------------------------------------
+
+ETAPA 1: Ingestão de Dados da Camada Bronze
+- Ação: Leitura do arquivo CSV bruto (/Volumes/.../acidentes_brasil.csv).
+- Parâmetros utilizados: header=True, sep=";", inferSchema=False, encoding="utf-8".
+> POR QUE FIZ ISSO: 
+  * 'inferSchema=False': Ao ler os dados inicialmente como 'string', evitamos que o Spark tente adivinhar os tipos de dados incorretamente, o que poderia gerar valores nulos ou erros de ingestão devido a sujeiras na base bruta.
+  * 'encoding="utf-8"': Garante que caracteres especiais da língua portuguesa (como acentos e cedilhas) sejam lidos corretamente.
+  * 'sep=";"': Adequação ao padrão brasileiro de arquivos CSV.
+
+ETAPA 2: Padronização do Cabeçalho (Nomes das Colunas)
+- Ação: Conversão de todos os nomes de colunas para letras minúsculas e substituição de espaços por "underline" (_). Ex: "Tipo do Acidente" virou "tipo_do_acidente".
+> POR QUE FIZ ISSO: 
+  * Facilita a manipulação dos dados via código (PySpark) e evita erros de sintaxe em consultas SQL futuras. O padrão "snake_case" é uma boa prática de Governança de Dados, eliminando a necessidade de usar crases (` `) ao referenciar colunas em queries.
+
+ETAPA 3: Tratamento e Tipagem de Dados Temporais
+- Ação: Renomeio da coluna "data_inversa" para "data" e conversão do tipo de dado de 'String' para 'Date' (formato dd/MM/yyyy).
+> POR QUE FIZ ISSO: 
+  * Renomear a coluna torna o nome mais semântico e intuitivo para os analistas de negócio. 
+  * A conversão de String para Date é crucial para habilitar análises de séries temporais na camada Ouro (Gold), permitindo agrupar os acidentes por mês, ano, ou calcular intervalos de tempo de forma nativa e otimizada.
+
+ETAPA 4: Limpeza de Dados (Qualidade e Desduplicação)
+- Ação: Remoção de linhas completamente vazias (dropna(how='all')) e remoção de registros duplicados (dropDuplicates).
+> POR QUE FIZ ISSO: 
+  * Linhas totalmente nulas não agregam valor e consomem processamento.
+  * Registros duplicados corrompem a integridade dos dados, causando dupla contagem em métricas e KPIs (ex: contar o mesmo acidente duas vezes).
+
+ETAPA 5: Padronização de Valores Ausentes
+- Ação: Varredura de todas as colunas convertendo a string literal "NULL" para o termo "N/I" (Não Informado).
+> POR QUE FIZ ISSO: 
+  * Muitas vezes, os sistemas de origem exportam a palavra "NULL" como um texto, e não como um valor nulo real de banco de dados. Substituir por "N/I" padroniza a visualização do dado ausente para o usuário final, deixando claro que a informação não foi preenchida no momento do registro do acidente.
+
+ETAPA 6: Regra de Negócio e Criação de View SQL
+- Ação: Criação de um novo DataFrame filtrando apenas os acidentes do estado de São Paulo (uf = 'SP') e criação da tabela temporária 'tabela_acidentes_sp'.
+> POR QUE FIZ ISSO: 
+  * O filtro atende a uma necessidade de focar a análise de forma regionalizada (São Paulo). 
+  * A criação da "Temp View" é uma excelente prática para democratizar o acesso ao dado: ela permite que Cientistas de Dados ou Analistas de BI consultem esse dataset limpo usando linguagem SQL padrão diretamente no Databricks, sem precisarem saber programar em Python/PySpark.
+
+--------------------------------------------------------------------------------
+3. RESULTADOS DA LIMPEZA
+--------------------------------------------------------------------------------
+- Foi implementado um sistema de log (print) que subtrai o total de linhas inicial do total de linhas final.
+- Isso garante a rastreabilidade, permitindo que a equipe de engenharia saiba exatamente o volume de dados sujos (nulos/duplicados) que foi descartado durante o processamento da camada Prata.
