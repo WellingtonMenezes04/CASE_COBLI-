@@ -12,7 +12,7 @@ Todo o processo foi automatizado para rodar diariamente utilizando o **Databrick
 ## 🛠️ Tecnologias e Bibliotecas Utilizadas
 * **Ambiente:** Databricks Free Community Edition
 * **Linguagem:** Python 3 e SQL
-* **Framework:** Apache Spark (PySpark) e Delta Lake
+* **Framework:** Apache Spark e Delta Lake
 * **Orquestração:** Databricks Workflows (Jobs & Triggers)
 * **Versionamento:** Git e GitHub
 * **Bibliotecas Nativas (PySpark):** 
